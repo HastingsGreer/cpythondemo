@@ -185,7 +185,6 @@ perturb_mandel(PyObject *dummy, PyObject *args)
     if (ref_r_arr == NULL) goto fail;
     ref_i_arr = PyArray_FROM_OTF(ref_i_arg, NPY_DOUBLE, NPY_IN_ARRAY);
     if (ref_i_arr == NULL) goto fail;
-
     if (
         (PyArray_NDIM(arr1) != 2) ||
         (PyArray_NDIM(arr2) != 2) ||
@@ -193,7 +192,7 @@ perturb_mandel(PyObject *dummy, PyObject *args)
         PyErr_SetString(SpamError, "All arrays must be 2D");
         goto fail;
     }
-    /* code that makes use of arguments */
+    
     /* You will probably need at least
        nd = PyArray_NDIM(<..>)    -- number of dimensions
        dims = PyArray_DIMS(<..>)  -- npy_intp array of length nd
@@ -221,7 +220,6 @@ perturb_mandel(PyObject *dummy, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
 
-
  fail:
     Py_XDECREF(arr1);
     Py_XDECREF(arr2);
@@ -246,3 +244,155 @@ PyInit_spam(void)
     import_array()
     return m;
 }
+
+
+
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#define PREC 4
+
+#define DBL_INT uint64_t
+#define ONE_INT uint32_t
+
+#define SHIFTBY 32
+
+typedef struct FixNum {
+    int64_t sign;
+    ONE_INT dpart[PREC];
+} FixNum;
+
+void uadd(FixNum * a, FixNum * b, FixNum* out) {
+    DBL_INT carry = 0;
+    for(int j = PREC - 1; j >= 0; j-- ){
+        DBL_INT res = ((DBL_INT) a->dpart[j]) + ((DBL_INT)b->dpart[j]) + ((DBL_INT) carry);
+        out->dpart[j] = (ONE_INT) res;
+        carry = res >> SHIFTBY;
+    }
+}
+
+void usub(FixNum * a, FixNum * b, FixNum* out) {
+    DBL_INT carry = 0;
+    for(int j = PREC - 1; j >= 0; j-- ){
+        DBL_INT t = a->dpart[j] - carry;
+        if(t < b->dpart[j]){
+          carry = 1;
+          t += (DBL_INT)1 << SHIFTBY; 
+        } else {
+          carry = 0;
+        }
+        DBL_INT res = t - ((DBL_INT)b->dpart[j]);
+        out->dpart[j] = (ONE_INT) res;
+        
+    }
+}
+
+int cmp(FixNum * a, FixNum * b ) {
+    if(a->sign != b->sign) {
+        return 2 * (a->sign > b->sign) - 1;
+    }
+    for(int i = 0; i < PREC; i++){
+        if (a->dpart[i] != b->dpart[i] ){
+            return 2 * (a->dpart[i] > b->dpart[i]) - 1;
+        }
+    }
+    return 0;
+}
+
+int abscmp(FixNum * a, FixNum * b ) {
+    for(int i = 0; i < PREC; i++){
+        if (a->dpart[i] != b->dpart[i] ){
+            return 2 * (a->dpart[i] > b->dpart[i]) - 1;
+        }
+    }
+    return 0;
+}
+
+void add(FixNum * a, FixNum * b, FixNum* out) {
+    if(a->sign == b->sign){
+        uadd(a, b, out);
+        out->sign = a->sign;
+    } else {
+        
+        int t = abscmp(a, b);
+        if (t == 1) {
+            usub(a, b, out);
+            out->sign = a->sign;
+        } else {
+            usub(b, a, out);
+            out->sign = b->sign;
+        }
+    }
+
+}
+
+
+void mul(FixNum * a, FixNum* b, FixNum* out) {
+    ONE_INT mul_temp[PREC * PREC * 2];
+    int j;
+    for(j = 0; j < PREC * PREC; j++ ){
+        ((DBL_INT*) mul_temp)[j] = 0;
+    }
+    int i;
+    //fill multiply table
+    DBL_INT carry;
+    for(i = 0; i < PREC; i++){
+        carry = 0;
+        for(j =  PREC - 1; j >= 0; j--){
+            
+            DBL_INT res = ((DBL_INT) a->dpart[j]) * ((DBL_INT) b->dpart[i]) + carry;
+            mul_temp[i * 2 * PREC + i + j] = (ONE_INT) res;
+            //printf("res: %02d ", res);
+            carry = res >> SHIFTBY;
+            //printf("carry: %02d ", carry);
+        }
+        mul_temp[i * 2 * PREC + i - 1] = carry;
+        //printf("\n");
+    }
+    //sum
+    carry = 0;
+
+    for(int col = 2 * PREC - 1; col >= 0; col--){
+        for(int row = 0; row < PREC; row++){
+            carry = carry + mul_temp[row * 2 * PREC + col];
+        }
+        if(col < PREC){
+            out->dpart[col] = (ONE_INT) carry;
+        }
+        carry = carry >> SHIFTBY;
+    }
+
+    out->sign = a->sign * b->sign;
+
+
+}
+
+
+FixNum* test() {
+    FixNum a = {0, {2, 0, 2}};
+    FixNum b = {0, {0, 1 << 31, 9}};
+
+    FixNum* out;
+    out = malloc(sizeof(out));
+
+    usub(&a, &b, out);
+    return out;
+
+}
+
+void unity(FixNum * a, FixNum * out){
+    FixNum b = {{1, 0, 0}, 0};
+    mul(a, &b, out);
+}
+int main(void) {
+  printf("\n");
+  FixNum z = *test();
+  printf("--\n");
+  for(int i = 0; i < PREC; i++){
+    printf("%08X ", z.dpart[i]);
+  }
+  return 0;
+}
+
