@@ -8,6 +8,7 @@ module1 = Extension('spam',
                     language='c',
                     extra_compile_args = ["/openmp", "/NODEFAULTLIB:library"])
 
+
 setup (name = 'SpamModule',
        version = '1.0',
        description = 'This is a demo package',
