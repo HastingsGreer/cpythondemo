@@ -1,0 +1,2 @@
+nvcc --use-local-env --cl-version 2015 -lib -o mandel.lib mandel.cu
+python setup.py build_ext -i -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\include" -lcudart -L"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\lib\x64" install
