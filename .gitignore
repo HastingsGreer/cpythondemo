@@ -1,0 +1,3 @@
+*.pyd
+*.lib
+build/*
