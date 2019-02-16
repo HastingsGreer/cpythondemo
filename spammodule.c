@@ -328,6 +328,10 @@ void add(FixNum * a, FixNum * b, FixNum* out) {
 
 }
 
+float toFloat(FixNum * a) {
+    return a->sign * (a->dpart[0] + (float) )
+}
+
 
 void mul(FixNum * a, FixNum* b, FixNum* out) {
     ONE_INT mul_temp[PREC * PREC * 2];
@@ -343,6 +347,7 @@ void mul(FixNum * a, FixNum* b, FixNum* out) {
         for(j =  PREC - 1; j >= 0; j--){
             
             DBL_INT res = ((DBL_INT) a->dpart[j]) * ((DBL_INT) b->dpart[i]) + carry;
+
             mul_temp[i * 2 * PREC + i + j] = (ONE_INT) res;
             //printf("res: %02d ", res);
             carry = res >> SHIFTBY;

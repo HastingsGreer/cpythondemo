@@ -5,9 +5,9 @@ sys.path.append("/d/python_extension/")
 import spam
 
 import mpmath
-mpmath.dps = 40
+
 minx, miny, maxx, maxy = map(mpmath.mpf, (-2, -2, 2, 2))
-mpmath.mp.prec = 290
+mpmath.mp.prec = 890
 
 
 it = 8000
@@ -95,15 +95,19 @@ class Settings:
 
 def main():
     #initial settings
-    xmin = mpmath.mpf(-2)
-    xmax = mpmath.mpf(2)
-    ymin = mpmath.mpf(-2)
-    ymax = mpmath.mpf(2)
+
+    centerx = mpmath.mpf(" -1.756882996047415507177544263880044205560240816681939504337701122205524205232602173448341712703733871053600384797384909496400768301564935457122130644767462662664858651590631630737324402579324531143018225431629992886257332217126295")
+    centery = mpmath.mpf("0.012178698364084925222456470314532744312959953422670766200219117572544897165197364251729676017200851973935584329711981645307984466766116936909884995575928407038962826724678263924301445881502867259057819318295270283982300902903242")
+
+    xmin = mpmath.mpf(-2) + centerx
+    xmax = mpmath.mpf(2) + centerx
+    ymin = mpmath.mpf(-2) + centery
+    ymax = mpmath.mpf(2) + centery
      
     depth = mpmath.mpf(60)   
     scale = mpmath.mpf(2)
     dim = 600
-    settings = Settings(depth, scale, dim, (0, 0))  
+    settings = Settings(depth, scale, dim, (centerx, centery))  
                                             # the settings object is used to keep track of
                                             # rendering settings as the click-generated 
                                             # callbacks change the view window
@@ -139,6 +143,10 @@ def onkey(event, ax, colorbar, settings):
     elif key == "w":
         settings.scale = settings.scale * 2
         render(ax, colorbar, settings, updateR=False)
+    elif key == "x":
+        settings.scale = settings.scale / 15
+        render(ax, colorbar, settings, updateR=False)
+
     elif key == "r":
         settings.changemethod()
         print(settings.method)
